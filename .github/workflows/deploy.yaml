@@ -44,8 +44,8 @@ jobs:
       - name: Generate Terraform Plan
         run: |
           cd terraform
-          terraform plan 
-          terraform apply --auto-approve
+          terraform plan -var-file="dev.tfvars" -out=tfplan
+          terraform apply -var-file="dev.tfvars" --auto-approve
 
         #terraform destroy -var-file="dev.tfvars" --auto-approve
 
