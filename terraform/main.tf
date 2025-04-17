@@ -63,6 +63,7 @@ module "web_servers" {
   public_subnets  = module.vpc.public_subnet_ids
   security_groups = [module.security_groups.web_sg_id]
   instance_type   = var.instance_type
+  ami = var.ami
 }
  
 module "database" {
