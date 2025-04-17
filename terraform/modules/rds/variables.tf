@@ -28,10 +28,7 @@ variable "db_password" {
   type        = string
   sensitive   = true
 }
-```
- 
-##### modules/rds/outputs.tf
-```hcl
+
 output "rds_endpoint" {
   description = "RDS endpoint"
   value       = aws_db_instance.mysql.endpoint
