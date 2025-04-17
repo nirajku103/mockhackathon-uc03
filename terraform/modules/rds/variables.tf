@@ -28,8 +28,3 @@ variable "db_password" {
   type        = string
   sensitive   = true
 }
-
-output "rds_endpoint" {
-  description = "RDS endpoint"
-  value       = aws_db_instance.mysql.endpoint
-}
