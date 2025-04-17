@@ -50,3 +50,7 @@ variable "db_password" {
   description = "Database password"
   sensitive   = true
 }
+variable "ami" {
+  description = "The AMI ID for the EC2 instances"
+  type        = string
+}
