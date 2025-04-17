@@ -1,77 +1,53 @@
-resource "aws_iam_openid_connect_provider" "github" {
-  url = "https://token.actions.githubusercontent.com"
-
-  client_id_list = [
-    "sts.amazonaws.com"
-  ]
-
-  thumbprint_list = [
-    "74F3A68F16524F15424927704C9506F55A9316BD" # GitHub's OIDC thumbprint
-  ]
-}
-
-# IAM Role for GitHub Actions
-resource "aws_iam_role" "github_actions_role" {
-  name = "github-actions-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRoleWithWebIdentity"
-        Effect = "Allow"
-        Principal = {
-          Federated = aws_iam_openid_connect_provider.github.arn
-        }
-        Condition = {
-          StringLike = {
-            "token.actions.githubusercontent.com:sub" : "repo:nirajku103/mockhackathon-uc03:ref:refs/heads/*"
-          }
-        }
-      }
-    ]
-  })
-}
-
-# Attach Policies to the IAM Role
-resource "aws_iam_role_policy_attachment" "github_actions_ecr" {
-  role       = aws_iam_role.github_actions_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser"
-}
-
-resource "aws_iam_role_policy_attachment" "github_actions_terraform" {
-  role       = aws_iam_role.github_actions_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess" # Adjust this to least privilege
-}
-
 
 module "vpc" {
-  source               = "./modules/vpc"
-  vpc_cidr             = var.vpc_cidr
-  public_subnet_cidrs  = var.public_subnet_cidrs
+  source = "./modules/vpc"
+  vpc_cidr = var.vpc_cidr
+  public_subnet_cidrs = var.public_subnet_cidrs
   private_subnet_cidrs = var.private_subnet_cidrs
-  availability_zones   = var.availability_zones
+  availability_zones = var.availability_zones
 }
- 
-module "security_groups" {
-  source = "./modules/security-groups"
+
+module "sg" {
+  source = "./modules/sg"
+  name = var.sg_name
+  description = var.sg_description
   vpc_id = module.vpc.vpc_id
+  ingress_from_port = var.sg_ingress_from_port
+  ingress_to_port = var.sg_ingress_to_port
+  ingress_protocol = var.sg_ingress_protocol
+  ingress_cidr_blocks = var.sg_ingress_cidr_blocks
 }
- 
-module "web_servers" {
-  source          = "./modules/ec2"
-  public_subnets  = module.vpc.public_subnet_ids
-  security_groups = [module.security_groups.web_sg_id]
-  instance_type   = var.instance_type
-  ami = var.ami
+
+module "rds_sg" {
+  source = "./modules/sg"
+  name = var.rds_sg_name
+  description = var.rds_sg_description
+  vpc_id = module.vpc.vpc_id
+  ingress_from_port = var.rds_sg_ingress_from_port
+  ingress_to_port = var.rds_sg_ingress_to_port
+  ingress_protocol = var.rds_sg_ingress_protocol
+  ingress_cidr_blocks = var.rds_sg_ingress_cidr_blocks
 }
- 
-module "database" {
-  source            = "./modules/rds"
-  private_subnets   = module.vpc.private_subnet_ids
-  security_groups   = [module.security_groups.db_sg_id]
-  db_instance_class = var.db_instance_class
-  db_name           = var.db_name
-  db_username       = var.db_username
-  db_password       = var.db_password
+
+module "ec2" {
+  source = "./modules/ec2"
+  ami_id = var.ec2_ami_id
+  instance_type = var.ec2_instance_type
+  subnet_ids = module.vpc.public_subnet_ids
+  security_group_ids = [module.sg.security_group_id]
 }
+
+module "rds" {
+  source = "./modules/rds"
+  allocated_storage = var.rds_allocated_storage
+  engine = var.rds_engine
+  instance_class = var.rds_instance_class
+  db_name = var.rds_db_name
+  db_username = var.rds_username
+  db_password = var.rds_password
+  parameter_group_name = var.rds_parameter_group_name
+  subnet_group_name = var.rds_subnet_group_name
+  security_group_ids = [module.rds_sg.security_group_id]
+  subnet_ids = module.vpc.private_subnet_ids
+}
+
