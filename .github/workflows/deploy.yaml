@@ -1,9 +1,9 @@
 name: Terraform Plan
 
 on:
-  push:  
+  push:
     branches:
-      - main
+      - test
 
 jobs:
   terraform-plan:
@@ -11,11 +11,20 @@ jobs:
     permissions:
       contents: write
       id-token: write
-      # pull-requests: write
+      pull-requests: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Ensures we get all history
+
+      - name: Prevent CI Loop
+        run: |
+          if [[ "$(git log -1 --pretty=%an)" == "GitHub Actions" ]]; then
+            echo "Commit is from GitHub Actions. Exiting to prevent loop."
+            exit 0
+          fi
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -29,13 +38,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # - name: Configure AWS Credentials
-      #   uses: aws-actions/configure-aws-credentials@v2
-      #   with:
-      #     role-to-assume: ${{ secrets.AWS_ROLE }}
-      #     role-session-name: GitHubActions
-      #     aws-region: eu-north-1
-
       - name: Initialize Terraform
         run: |
           cd terraform
@@ -44,10 +46,37 @@ jobs:
       - name: Generate Terraform Plan
         run: |
           cd terraform
-          terraform plan -var-file="dev.tfvars" -out=tfplan
-          terraform destroy -var-file="dev.tfvars" --auto-approve
+          terraform plan -var-file="prod.tfvars" -out=tfplan
 
-        # terraform apply -var-file="dev.tfvars" --auto-approve
+      - name: Save Terraform Plan File
+        run: |
+          cd terraform
+          terraform show -no-color tfplan > terraform-plan.md
+          rm -rf tfplan
+
+      - name: Read Terraform Plan File
+        id: read_plan
+        run: |
+          PLAN_CONTENT=$(cat terraform/terraform-plan.md)
+          echo "plan_content<<EOF" >> $GITHUB_ENV
+          echo "$PLAN_CONTENT" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Create Pull Request to main
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: test
+          base: main
+          title: "Terraform Plan Reviews"
+          body: |
+            ## Terraform Plan
+            THE following changes are proposed by this Terraform plan:
+            ```diff
+            ${{ env.plan_content }}
+            ```
+          labels: terraform, plan
+
+
 
         
         
