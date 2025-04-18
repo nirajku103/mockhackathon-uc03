@@ -77,5 +77,4 @@ jobs:
             ${{ env.plan_content }}
             ```
           labels: terraform, plan
-        
-        
+          
