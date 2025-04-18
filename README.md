@@ -1,3 +1,3 @@
 # mockhackathon-uc03
 Updated resources and workflows
-creating PR for test
+Creating PR for test
