@@ -3,7 +3,7 @@ name: Terraform Plan
 on:
   push:
     branches:
-      - terraform-plan
+      - test-markdown
 
 jobs:
   terraform-plan:
@@ -65,7 +65,7 @@ jobs:
       - name: Create Pull Request to main
         uses: peter-evans/create-pull-request@v6
         with:
-          branch: test
+          branch: test-markdown
           base: main
           title: "Terraform Plan Reviews"
           body: |
