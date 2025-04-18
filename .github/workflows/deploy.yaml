@@ -39,8 +39,6 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Initialize Terraform
-
-      - name: Initialize Terraform
         run: |
           cd terraform
           terraform init
